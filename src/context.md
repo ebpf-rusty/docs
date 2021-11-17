@@ -49,3 +49,43 @@ struct bpf_prog {
 	__BPF_PROG_RUN(prog, ctx, bpf_dispatcher_nop_func)
 
 ```
+
+bpf 程序中使用的 bpf map 类型，使用了下面的 `struct bpf_map` 来表示，一般来说，用户需要定义的字段就是 `bpf_map_type`，以及 `key_size`，`value_size`，还有 `max_entries`，其余的内核会为我们处理妥当
+```c
+struct bpf_map {
+	/* The first two cachelines with read-mostly members of which some
+	 * are also accessed in fast-path (e.g. ops, max_entries).
+	 */
+	const struct bpf_map_ops *ops ____cacheline_aligned;
+	struct bpf_map *inner_map_meta;
+#ifdef CONFIG_SECURITY
+	void *security;
+#endif
+	enum bpf_map_type map_type;
+	u32 key_size;
+	u32 value_size;
+	u32 max_entries;
+	u32 map_flags;
+	int spin_lock_off; /* >=0 valid offset, <0 error */
+	u32 id;
+	int numa_node;
+	u32 btf_key_type_id;
+	u32 btf_value_type_id;
+	struct btf *btf;
+	struct bpf_map_memory memory;
+	char name[BPF_OBJ_NAME_LEN];
+	u32 btf_vmlinux_value_type_id;
+	bool bypass_spec_v1;
+	bool frozen; /* write-once; write-protected by freeze_mutex */
+	/* 22 bytes hole */
+
+	/* The 3rd and 4th cacheline with misc members to avoid false sharing
+	 * particularly with refcounting.
+	 */
+	atomic64_t refcnt ____cacheline_aligned;
+	atomic64_t usercnt;
+	struct work_struct work;
+	struct mutex freeze_mutex;
+	u64 writecnt; /* writable mmap cnt; protected by freeze_mutex */
+};
+```
